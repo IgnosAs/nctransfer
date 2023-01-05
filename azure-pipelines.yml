@@ -1,0 +1,54 @@
+# Only run against master
+trigger:
+  - master
+  
+  # Run on PRs targeting master
+  pr:
+    - master
+  
+  pool:
+    vmImage: 'windows-latest'
+  
+  variables:
+    buildConfiguration: 'Release'
+  
+  stages:
+  
+    - stage: 'Build'
+      displayName: 'Build the application'
+      jobs:
+        - job: 'Build'
+          displayName: 'Build job'
+          steps:
+            - task: UseDotNet@2
+              inputs:
+                version: '7.0.x'
+                includePreviewVersions: false
+            
+            - task: NuGetAuthenticate@1
+                
+            - task: DotNetCoreCLI@2
+              displayName: 'Publish'
+              inputs:
+                command: 'publish'
+                publishWebProjects: false
+                projects: '**/NcTransfer.csproj'
+                arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/$(buildConfiguration) /p:InformationalVersion=$(Build.BuildNumber) --runtime win-x64 --self-contained true'
+                zipAfterPublish: true
+              condition: succeeded()
+  
+            - publish: '$(Build.ArtifactStagingDirectory)'
+              artifact: drop
+  
+            - task: GitHubRelease@1
+              displayName: 'Create GitHub Release'
+              condition: eq(variables['Build.SourceBranch'], 'refs/heads/master')
+              inputs:
+                gitHubConnection: 'github.com_tthorsen'
+                tagSource: userSpecifiedTag
+                tag: $(Build.BuildNumber)
+                assets: $(Build.ArtifactStagingDirectory)/**/*.zip
+  
+  
+              
+  
