@@ -36,10 +36,14 @@ namespace IgnosCncSetupCamTransfer
 #endif
             var file = args[0];
             var upload = await _cncFileTransferClient.CreateUploadCamTransferInfoAsync(new UploadCamFileRequest { Filename = Path.GetFileName(file) });
+            if (cancellationToken.IsCancellationRequested)
+                return;
             var blobClient = new BlobClient(new Uri(upload.UploadUrl));
             using var localFile = File.OpenRead(file);
 
             await blobClient.UploadAsync(localFile, true, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             _logger.LogInformation("After upload");
 

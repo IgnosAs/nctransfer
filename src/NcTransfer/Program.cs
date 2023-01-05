@@ -23,11 +23,9 @@ internal class Program
             {
                 services.AddLogging();
                 services.Configure<IgnosApiOptions>(hostContext.Configuration.GetSection(IgnosApiOptions.IgnosApi));
-
                 services.AddIgnosHttpClient(hostContext.Configuration)
                     .AddHttpMessageHandler((serv) =>
                     {
-                        services.Configure<IgnosApiOptions>(hostContext.Configuration.GetSection(IgnosApiOptions.IgnosApi));
                         IOptions<IgnosApiOptions> options = serv.GetRequiredService<IOptions<IgnosApiOptions>>();
 
                         return new IgnosDelegatingHandler(options.Value.ClientId, options.Value.Scope);
