@@ -18,11 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.49.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="7.0.0" />
-	<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.54.1" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="7.0.1" />
+	<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
 	<PackageReference Include="Ignos.Api.Client" Version="2023.1.4.4493" />
-	<PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
+	<PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
   </ItemGroup>
 
 </Project>
