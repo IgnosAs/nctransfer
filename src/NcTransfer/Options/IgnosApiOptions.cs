@@ -1,10 +1,10 @@
-﻿namespace IgnosCncSetupCamTransfer.Options
+﻿namespace NcTransfer.Options;
+
+internal class IgnosApiOptions
 {
-    internal class IgnosApiOptions
-    {
-        public const string IgnosApi = "IgnosApi";
-        public string ClientId { get; set; }
-        public string Scope { get; set; }
-        public string BaseUrl { get; set; }
-    }
+    public const string IgnosApi = "IgnosApi";
+    public required string ClientId { get; set; }    
+    public required string TenantId { get; set; }
+    public required string Scope { get; set; }
+    public required string BaseUrl { get; set; }
 }

@@ -1,59 +1,57 @@
-﻿using IgnosCncSetupCamTransfer.Options;
-using Microsoft.Extensions.Options;
+﻿using System.Net.Http.Headers;
 using Microsoft.Identity.Client;
-using System.Net.Http.Headers;
 
-namespace IgnosCncSetupCamTransfer.Auth
+namespace NcTransfer.Auth;
+
+internal class IgnosDelegatingHandler : DelegatingHandler
 {
-    internal class IgnosDelegatingHandler : DelegatingHandler
+    private readonly string[] scopes;
+
+    private readonly IPublicClientApplication clientApp;
+
+    public IgnosDelegatingHandler(string tenantId, string clientId, string scope)
     {
-        private readonly string[] scopes;
+        scopes = new[] { scope };
 
-        private readonly IPublicClientApplication clientApp;
+        clientApp = PublicClientApplicationBuilder.Create(clientId)
+            .WithTenantId(tenantId)
+            .WithDefaultRedirectUri()
+            .Build();
 
-        public IgnosDelegatingHandler(string clientId, string scope)
+        TokenCacheHelper.EnableSerialization(clientApp.UserTokenCache);
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var accounts = await clientApp.GetAccountsAsync();
+        var firstAccount = accounts.FirstOrDefault();
+
+        AuthenticationResult? authResult;
+        try
         {
-            scopes = new[] { scope };
-
-            clientApp = PublicClientApplicationBuilder.Create(clientId)
-                .WithDefaultRedirectUri()
-                .Build();
-
-            TokenCacheHelper.EnableSerialization(clientApp.UserTokenCache);
+            authResult = await clientApp.AcquireTokenSilent(scopes, firstAccount)
+                .ExecuteAsync(cancellationToken);
         }
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        catch (MsalUiRequiredException)
         {
-            var accounts = await clientApp.GetAccountsAsync();
-            var firstAccount = accounts.FirstOrDefault();
-
-            AuthenticationResult authResult = null;
             try
             {
-                authResult = await clientApp.AcquireTokenSilent(scopes, firstAccount)
-                    .ExecuteAsync(cancellationToken);
+                authResult = await clientApp.AcquireTokenInteractive(scopes)
+                    .WithAccount(accounts.FirstOrDefault())
+                    .WithPrompt(Prompt.SelectAccount)
+                    .ExecuteAsync();
             }
-            catch (MsalUiRequiredException ex)
+            catch (MsalException msalex)
             {
-                try
-                {
-                    authResult = await clientApp.AcquireTokenInteractive(scopes)
-                        .WithAccount(accounts.FirstOrDefault())
-                        .WithPrompt(Prompt.SelectAccount)
-                        .ExecuteAsync();
-                }
-                catch (MsalException msalex)
-                {
-                    throw new Exception($"Error Acquiring Token:{Environment.NewLine}{msalex}", msalex);
-                }
+                throw new Exception($"Error Acquiring Token:{Environment.NewLine}{msalex}", msalex);
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error Acquiring Token Silently:{System.Environment.NewLine}{ex}", ex);
-            }
-
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authResult.AccessToken);
-            return await base.SendAsync(request, cancellationToken);
         }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error Acquiring Token Silently:{Environment.NewLine}{ex}", ex);
+        }
+
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authResult.AccessToken);
+        return await base.SendAsync(request, cancellationToken);
     }
 }

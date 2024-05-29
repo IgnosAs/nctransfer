@@ -1,43 +1,41 @@
 ﻿using Ignos.Api.Client;
-using IgnosCncSetupCamTransfer;
-using IgnosCncSetupCamTransfer.Auth;
-using IgnosCncSetupCamTransfer.Options;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using NcTransfer;
+using NcTransfer.Auth;
+using NcTransfer.Options;
 
-internal class Program
-{
-    private static async Task Main(string[] args)
+var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddLogging();
+builder.Services.Configure<IgnosApiOptions>(builder.Configuration.GetSection(IgnosApiOptions.IgnosApi));
+builder.Services.AddIgnosHttpClient(builder.Configuration)
+    .AddHttpMessageHandler((serv) =>
     {
-        var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (s, e) =>
-        {
-            Console.WriteLine("Canceling...");
-            cts.Cancel();
-            e.Cancel = true;
-        };
+        IOptions<IgnosApiOptions> options = serv.GetRequiredService<IOptions<IgnosApiOptions>>();
 
-        using IHost host = Host.CreateDefaultBuilder(args)
-            .ConfigureServices((hostContext, services) =>
-            {
-                services.AddLogging();
-                services.Configure<IgnosApiOptions>(hostContext.Configuration.GetSection(IgnosApiOptions.IgnosApi));
-                services.AddIgnosHttpClient(hostContext.Configuration)
-                    .AddHttpMessageHandler((serv) =>
-                    {
-                        IOptions<IgnosApiOptions> options = serv.GetRequiredService<IOptions<IgnosApiOptions>>();
+        return new IgnosDelegatingHandler(options.Value.TenantId, options.Value.ClientId, options.Value.Scope);
+    })
+    .AddDefaultPolicyHandler();
 
-                        return new IgnosDelegatingHandler(options.Value.ClientId, options.Value.Scope);
-                    })
-                    .AddDefaultPolicyHandler();
+builder.Services.AddIgnosApiClient<ICncFileTransferClient, CncFileTransferClient>();
+builder.Services.AddIgnosApiClient<IUploadClient, UploadClient>();
+builder.Services.AddTransient<NcTransferService>();
+builder.Services.AddTransient<NcPostFileService>();
 
-                services.AddIgnosApiClient<ICncFileTransferClient, CncFileTransferClient>();
-                services.AddTransient<NcTransferService>();
-            })
-            .Build();
+builder.Services.AddTransient<INcTransferService>((sp) => 
+    args switch 
+    { 
+        { Length: 1 } => sp.GetRequiredService<NcTransferService>(),
+        { Length: 2 } => sp.GetRequiredService<NcPostFileService>(),
+        _ => throw new Exception($"Usage: {Environment.GetCommandLineArgs()[0]} file [machineId]")
+    });
 
-        var serv = host.Services.GetRequiredService<NcTransferService>();
-        await serv.Run(args, cts.Token);
-    }
-}
+
+using IHost host = builder.Build();
+await host.StartAsync();
+var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+
+var serv = host.Services.GetRequiredService<INcTransferService>();
+await serv.Run(args, lifetime.ApplicationStopping);
+
+lifetime.StopApplication();
+await host.WaitForShutdownAsync();
