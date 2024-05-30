@@ -51,3 +51,23 @@ The tool is intended for use from other systems. It expects the path to the file
 ```
 NcTransfer.exe pathToFile machineId
 ```
+
+## Logging
+
+Configure logging in appsettings.json in the `Serilog` section. See [Serilog documentation](https://github.com/serilog/serilog-settings-configuration) for details.
+In particular, adapt the `WriteTo` section to your needs:
+
+```
+        "WriteTo": [
+            { "Name": "Console" },
+            {
+                "Name": "File",
+                "Args": {
+                    "path": "c:\\temp\\nctransfer-log.txt",
+                    "rollingInterval": "Day",
+                    "rollOnFileSizeLimit": true,
+                    "retainedFileCountLimit": 10
+                }
+            }
+        ],
+```

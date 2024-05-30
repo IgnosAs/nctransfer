@@ -3,9 +3,10 @@ using Microsoft.Extensions.Options;
 using NcTransfer;
 using NcTransfer.Auth;
 using NcTransfer.Options;
+using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddLogging();
+builder.Services.AddSerilog(loggerConfiguration => loggerConfiguration.ReadFrom.Configuration(builder.Configuration));
 builder.Services.Configure<IgnosApiOptions>(builder.Configuration.GetSection(IgnosApiOptions.IgnosApi));
 builder.Services.AddIgnosHttpClient(builder.Configuration)
     .AddHttpMessageHandler((serv) =>
