@@ -1,6 +1,6 @@
 # Only run against master
 trigger:
-- master
+  - master
 
 # Run on PRs targeting master
 pr:
@@ -13,7 +13,6 @@ variables:
   buildConfiguration: 'Release'
 
 stages:
-
   - stage: 'Build'
     displayName: 'Build the application'
     jobs:
@@ -24,9 +23,9 @@ stages:
             inputs:
               version: '8.0.x'
               includePreviewVersions: false
-          
+
           - task: NuGetAuthenticate@1
-              
+
           - task: DotNetCoreCLI@2
             displayName: 'Publish'
             inputs:
@@ -36,6 +35,17 @@ stages:
               arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)/$(buildConfiguration) /p:InformationalVersion=$(Build.BuildNumber) /p:PublishSingleFile=true --runtime win-x64 --self-contained true'
               zipAfterPublish: true
             condition: succeeded()
+
+          - task: ArchiveFiles@2
+            inputs:
+              archiveFile: $(Build.ArtifactStagingDirectory)/$(buildConfiguration)/NcTransfer.zip
+              replaceExistingArchive: false
+              rootFolderOrFile: $(Build.SourcesDirectory)/images
+          - task: ArchiveFiles@2
+            inputs:
+              archiveFile: $(Build.ArtifactStagingDirectory)/$(buildConfiguration)/NcTransfer.zip
+              replaceExistingArchive: false
+              rootFolderOrFile: $(Build.SourcesDirectory)/README.md
 
           - publish: '$(Build.ArtifactStagingDirectory)'
             artifact: drop
@@ -48,6 +58,3 @@ stages:
               tagSource: userSpecifiedTag
               tag: $(Build.BuildNumber)
               assets: $(Build.ArtifactStagingDirectory)/**/*.zip
-
-
-            
