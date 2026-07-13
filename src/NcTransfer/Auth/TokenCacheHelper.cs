@@ -1,4 +1,4 @@
-﻿using Microsoft.Identity.Client;
+using Microsoft.Identity.Client;
 using System.Security.Cryptography;
 
 namespace NcTransfer.Auth;
